@@ -1,4 +1,4 @@
-baseURL = "http://seasonyuu.github.io/"
+baseURL = "https://seasonyuu.github.io/"
 languageCode = "zh-cn"
 title = "Season Yuu AOSP 笔记"
 theme = "hugo-tranquilpeak-theme"
