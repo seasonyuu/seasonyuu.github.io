@@ -3,6 +3,7 @@ languageCode = "zh-cn"
 title = "Season Yuu AOSP 笔记"
 theme = "hugo-tranquilpeak-theme"
 paginate = 7
+summaryLength=24
 canonifyurls = true
 
 [taxonomies]
@@ -12,7 +13,7 @@ canonifyurls = true
 
 [author]
   name = "Season Yuu"
-  bio = "Season Yuu 的 AOSP 踩坑笔记"
+  bio = "Season Yuu 的 AOSP 踩坑笔记。在这条路上，自己作为一个小白，希望能给其他的小白带来一些有作用的文章。"
   job = "Android 软件开发者"
   location = "中国"
   gravatarEmail = "seasonyuu@gmail.com"
@@ -152,8 +153,8 @@ canonifyurls = true
   #   url = "/#about"
 
   # Customize copyright value "© 2017 <CUSTOMIZATION>. All Rights Reserved"
-  # [params.footer]
-  #   copyright = "<a href=\"https://github.com/kakawait\">kakawait</a>"
+  [params.footer]
+     copyright = "<a href=\"https://github.com/seasonyuu\">Season Yuu</a>"
 
 [markup]
   [markup.goldmark]

@@ -63,3 +63,20 @@ brotli -d system.new.dat.br
 得到各个镜像后，Linux 中需要将镜像 mount 到某个文件夹，我们首先 mount `system` 分区。
 
 挂载成功后，我们会看根目录中又存在一个 `system` 目录，这个目录才是我们需要的最终目录。
+
+![](/images/factory_image_extracted.png)
+
+在刷机之后，通过 root 你也可以看到实际上 `system` 分区种就是这样的结构了，当然了，其中的 `vendor` 和 `product` 实际上 link 到对应的分区而已。
+
+## 配合 `proprietary-files.txt` 使用
+
+在挂在镜像成功之后，我们还需要将这些文件全都拉出来，形成一个和 ROM 中目录结构类似的目录。目录可以参考前面的截图。
+
+device tree 中通常需要准备好 `setup-makefiles.sh` 和 `extract-files.sh` 脚本，如果这两份脚本是确认可用了的话，以前面截图的目录位置为例子。
+
+```sh
+./setup-makefiles.sh /miui_12.0.9/system
+./extract-files.sh /miui_12.0.9/system
+```
+
+这样执行后，脚本就会根据 `proprietary-files.txt` 定义的规则创建或更新对应的 vendor 仓库了。
