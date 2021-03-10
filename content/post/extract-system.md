@@ -11,6 +11,8 @@ keywords:
 
 <!-- toc -->
 
+> 以下内容适用于 Android 10 的固件镜像解压及挂载
+
 ## 为什么需要解压镜像
 
 对于一些 OEM 定制的私有库，通常开源的 ROM 源码中是不可能包含的，而设备本身要运行起三方系统时，这些厂商定制的私有内容就需要作为预编译项添加到编译过程中。
@@ -25,12 +27,11 @@ keywords:
 
 ### 从卡刷包提取 img
 
-在我忘了哪个 Android 版本之后开始，卡刷包中的镜像分成了三个文件，例如如果是 system 的话
+在我忘了哪个 Android 版本之后开始，卡刷包中的镜像分成了两个文件，例如如果是 system 的话
 
 ```
 system.transfer.list
 system.new.dat
-system.img
 ```
 
 其中 `system.new.dat` 可能是 `system.new.dat.br` ，这种情况下需要使用 Google 官方工具 [`brotli`](https://github.com/google/brotli) 进行转换
