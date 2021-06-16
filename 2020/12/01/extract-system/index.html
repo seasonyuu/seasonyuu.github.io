@@ -1,0 +1,608 @@
+
+<!DOCTYPE html>
+<html lang="zh-cn">
+    
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="SeasonYuu 笔记屋">
+    <title>解压 Android 镜像 - SeasonYuu 笔记屋</title>
+    <meta name="author" content="Season Yuu">
+    
+        <meta name="keywords" content="vendor 分区,system 分区,product 分区">
+    
+    
+        <link rel="icon" href="https://seasonyuu.github.io/assets/images/favicon.ico">
+    
+    
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"Season Yuu","sameAs":["https://github.com/seasonyuu","mailto"],"image":"./avatar.jpg"},"articleBody":"\n\n\n以下内容适用于 Android 10 的固件镜像解压及挂载\n\n为什么需要解压镜像对于一些 OEM 定制的私有库，通常开源的 ROM 源码中是不可能包含的，而设备本身要运行起三方系统时，这些厂商定制的私有内容就需要作为预编译项添加到编译过程中。\n在 Project-Treble 被推行之后，Android 系统中指定了 product 分区和 vendor 分区来存放一些厂商指定的、设备定制的内容，通常我们需要从 system 分区和这两个分区中拉取一些指定的文件。\n开始我们需要的镜像文件有三个： system.img, vendor.img 和 product.img。\n通常我们从官方网站中下载线刷包会更便于提取对应的镜像文件，而有些时候可能并不存在线刷宝提供下载，那我们就要自己转换得到对应的 *.img 文件。\n从卡刷包提取 img在我忘了哪个 Android 版本之后开始，卡刷包中的镜像分成了两个文件，例如如果是 system 的话\n12system.transfer.listsystem.new.dat\n\n其中 system.new.dat 可能是 system.new.dat.br ，这种情况下需要使用 Google 官方工具 brotli 进行转换\nDebian 系可以直接这样安装\n12sudo apt updatesudo apt install brotli\n\n安装成功后，执行\n1brotli -d system.new.dat.br\n\n执行完则可以得到 system.new.dat 文件了。\n得到这三个文件之后，使用 dat2img （要求 python 环境）转换后即可得到 system.img 镜像文件\n1./sdat2img.py system.transfer.list system.new.dat system.img\n\n上面以 system.img 举例，vendor 和 product 参考替换对应文件名即可。\n分区介绍得到各个镜像后，Linux 中需要将镜像 mount 到某个文件夹，我们首先 mount system 分区。\n挂载成功后，我们会看根目录中又存在一个 system 目录，这个目录才是我们需要的最终目录。\n\n在刷机之后，通过 root 你也可以看到实际上 system 分区种就是这样的结构了，当然了，其中的 vendor 和 product 实际上 link 到对应的分区而已。\n配合 proprietary-files.txt 使用在挂在镜像成功之后，我们还需要将这些文件全都拉出来，形成一个和 ROM 中目录结构类似的目录。目录可以参考前面的截图。\ndevice tree 中通常需要准备好 setup-makefiles.sh 和 extract-files.sh 脚本，如果这两份脚本是确认可用了的话，以前面截图的目录位置为例子。\n12./setup-makefiles.sh /miui_12.0.9/system./extract-files.sh /miui_12.0.9/system\n\n这样执行后，脚本就会根据 proprietary-files.txt 定义的规则创建或更新对应的 vendor 仓库了。\n","dateCreated":"2020-12-01T09:16:06+00:00","dateModified":"2021-06-16T09:08:36+00:00","datePublished":"2020-12-01T09:16:06+00:00","description":"\n\n\n以下内容适用于 Android 10 的固件镜像解压及挂载\n\n为什么需要解压镜像对于一些 OEM 定制的私有库，通常开源的 ROM 源码中是不可能包含的，而设备本身要运行起三方系统时，这些厂商定制的私有内容就需要作为预编译项添加到编译过程中。","headline":"解压 Android 镜像","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://seasonyuu.github.io/2020/12/01/extract-system/"},"publisher":{"@type":"Organization","name":"Season Yuu","sameAs":["https://github.com/seasonyuu","mailto"],"image":"./avatar.jpg","logo":{"@type":"ImageObject","url":"./avatar.jpg"}},"url":"https://seasonyuu.github.io/2020/12/01/extract-system/","keywords":"AOSP 准备工作"}</script>
+    <meta name="description" content="以下内容适用于 Android 10 的固件镜像解压及挂载  为什么需要解压镜像对于一些 OEM 定制的私有库，通常开源的 ROM 源码中是不可能包含的，而设备本身要运行起三方系统时，这些厂商定制的私有内容就需要作为预编译项添加到编译过程中。">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="解压 Android 镜像">
+<meta property="og:url" content="https://seasonyuu.github.io/2020/12/01/extract-system/index.html">
+<meta property="og:site_name" content="SeasonYuu 笔记屋">
+<meta property="og:description" content="以下内容适用于 Android 10 的固件镜像解压及挂载  为什么需要解压镜像对于一些 OEM 定制的私有库，通常开源的 ROM 源码中是不可能包含的，而设备本身要运行起三方系统时，这些厂商定制的私有内容就需要作为预编译项添加到编译过程中。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://seasonyuu.github.io/2020/12/01/extract-system/factory_image_extracted.png">
+<meta property="article:published_time" content="2020-12-01T09:16:06.000Z">
+<meta property="article:modified_time" content="2021-06-16T09:08:36.955Z">
+<meta property="article:author" content="Season Yuu">
+<meta property="article:tag" content="AOSP 准备工作">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://seasonyuu.github.io/2020/12/01/extract-system/factory_image_extracted.png">
+    
+    
+        
+    
+    
+        <meta property="og:image" content="https://seasonyuu.github.io/assets/images/./avatar.jpg"/>
+    
+    
+    
+    
+    <!--STYLES-->
+    
+<link rel="stylesheet" href="/assets/css/style-6h8rzx2nlvnuhsfvag8a8asiym8uxcq2iljevwdentgvkrofreed3byodqbo.min.css">
+
+    <!--STYLES END-->
+    
+
+    
+
+    
+        
+    
+</head>
+
+    <body>
+        <div id="blog">
+            <!-- Define author's picture -->
+
+
+    
+        
+            
+        
+    
+
+<header id="header" data-behavior="4">
+    <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+    <div class="header-title">
+        <a
+            class="header-title-link"
+            href="/"
+            aria-label=""
+        >
+            SeasonYuu 笔记屋
+        </a>
+    </div>
+    
+        
+            <a
+                class="header-right-picture "
+                href="#about"
+                aria-label="打开链接: /#about"
+            >
+        
+        
+            <img class="header-picture" src="/assets/images/./avatar.jpg" alt="作者的图片"/>
+        
+        </a>
+    
+</header>
+
+            <!-- Define author's picture -->
+
+
+
+        
+    
+
+<nav id="sidebar" data-behavior="4">
+    <div class="sidebar-container">
+        
+            <div class="sidebar-profile">
+                <a
+                    href="/#about"
+                    aria-label="阅读有关作者的更多信息"
+                >
+                    <img class="sidebar-profile-picture" src="/assets/images/./avatar.jpg" alt="作者的图片"/>
+                </a>
+                <h4 class="sidebar-profile-name">Season Yuu</h4>
+                
+                    <h5 class="sidebar-profile-bio"><p>SeasonYuu 笔记屋</p>
+</h5>
+                
+            </div>
+        
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/"
+                            
+                            rel="noopener"
+                            title="首页"
+                        >
+                        <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">首页</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-categories"
+                            
+                            rel="noopener"
+                            title="分类"
+                        >
+                        <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">分类</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-tags"
+                            
+                            rel="noopener"
+                            title="标签"
+                        >
+                        <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">标签</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-archives"
+                            
+                            rel="noopener"
+                            title="归档"
+                        >
+                        <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">归档</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link open-algolia-search"
+                            href="#search"
+                            
+                            rel="noopener"
+                            title="搜索"
+                        >
+                        <i class="sidebar-button-icon fa fa-search" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">搜索</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="#about"
+                            
+                            rel="noopener"
+                            title="关于"
+                        >
+                        <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">关于</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://github.com/seasonyuu"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="GitHub"
+                        >
+                        <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">GitHub</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/mailto"
+                            
+                            rel="noopener"
+                            title="邮箱"
+                        >
+                        <i class="sidebar-button-icon fa fa-envelope" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">邮箱</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+    </div>
+</nav>
+
+            
+            <div id="main" data-behavior="4"
+                 class="
+                        hasCoverMetaIn
+                        ">
+                
+<article class="post">
+    
+    
+        <div class="post-header main-content-wrap text-left">
+    
+        <h1 class="post-title">
+            解压 Android 镜像
+        </h1>
+    
+    
+        <div class="post-meta">
+    <time datetime="2020-12-01T09:16:06+00:00">
+	
+		    12月 01, 2020
+    	
+    </time>
+    
+        <span>发布在 </span>
+        
+    <a class="category-link" href="/categories/AOSP/">AOSP</a>
+
+
+    
+</div>
+
+    
+</div>
+
+    
+    <div class="post-content markdown">
+        <div class="main-content-wrap">
+            <h1 id="table-of-contents">目录</h1><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88%E9%9C%80%E8%A6%81%E8%A7%A3%E5%8E%8B%E9%95%9C%E5%83%8F"><span class="toc-text">为什么需要解压镜像</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%BC%80%E5%A7%8B"><span class="toc-text">开始</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BB%8E%E5%8D%A1%E5%88%B7%E5%8C%85%E6%8F%90%E5%8F%96-img"><span class="toc-text">从卡刷包提取 img</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%88%86%E5%8C%BA%E4%BB%8B%E7%BB%8D"><span class="toc-text">分区介绍</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%85%8D%E5%90%88-proprietary-files-txt-%E4%BD%BF%E7%94%A8"><span class="toc-text">配合 proprietary-files.txt 使用</span></a></li></ol>
+
+<blockquote>
+<p>以下内容适用于 Android 10 的固件镜像解压及挂载</p>
+</blockquote>
+<h2 id="为什么需要解压镜像"><a href="#为什么需要解压镜像" class="headerlink" title="为什么需要解压镜像"></a>为什么需要解压镜像</h2><p>对于一些 OEM 定制的私有库，通常开源的 ROM 源码中是不可能包含的，而设备本身要运行起三方系统时，这些厂商定制的私有内容就需要作为预编译项添加到编译过程中。</p>
+<p>在 Project-Treble 被推行之后，Android 系统中指定了 <code>product</code> 分区和 <code>vendor</code> 分区来存放一些厂商指定的、设备定制的内容，通常我们需要从 <code>system</code> 分区和这两个分区中拉取一些指定的文件。</p>
+<h2 id="开始"><a href="#开始" class="headerlink" title="开始"></a>开始</h2><p>我们需要的镜像文件有三个： <code>system.img</code>, <code>vendor.img</code> 和 <code>product.img</code>。</p>
+<p>通常我们从官方网站中下载线刷包会更便于提取对应的镜像文件，而有些时候可能并不存在线刷宝提供下载，那我们就要自己转换得到对应的 <code>*.img</code> 文件。</p>
+<h3 id="从卡刷包提取-img"><a href="#从卡刷包提取-img" class="headerlink" title="从卡刷包提取 img"></a>从卡刷包提取 img</h3><p>在我忘了哪个 Android 版本之后开始，卡刷包中的镜像分成了两个文件，例如如果是 system 的话</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">system.transfer.list</span><br><span class="line">system.new.dat</span><br></pre></td></tr></table></figure>
+
+<p>其中 <code>system.new.dat</code> 可能是 <code>system.new.dat.br</code> ，这种情况下需要使用 Google 官方工具 <a target="_blank" rel="noopener" href="https://github.com/google/brotli"><code>brotli</code></a> 进行转换</p>
+<p>Debian 系可以直接这样安装</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">sudo apt update</span><br><span class="line">sudo apt install brotli</span><br></pre></td></tr></table></figure>
+
+<p>安装成功后，执行</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">brotli -d system.new.dat.br</span><br></pre></td></tr></table></figure>
+
+<p>执行完则可以得到 <code>system.new.dat</code> 文件了。</p>
+<p>得到这三个文件之后，使用 <a target="_blank" rel="noopener" href="https://github.com/danielmmmm/dat2img">dat2img</a> （要求 <code>python</code> 环境）转换后即可得到 <code>system.img</code> 镜像文件</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./sdat2img.py system.transfer.list system.new.dat system.img</span><br></pre></td></tr></table></figure>
+
+<p>上面以 <code>system.img</code> 举例，<code>vendor</code> 和 <code>product</code> 参考替换对应文件名即可。</p>
+<h2 id="分区介绍"><a href="#分区介绍" class="headerlink" title="分区介绍"></a>分区介绍</h2><p>得到各个镜像后，Linux 中需要将镜像 mount 到某个文件夹，我们首先 mount <code>system</code> 分区。</p>
+<p>挂载成功后，我们会看根目录中又存在一个 <code>system</code> 目录，这个目录才是我们需要的最终目录。</p>
+<p><img src="./factory_image_extracted.png"></p>
+<p>在刷机之后，通过 root 你也可以看到实际上 <code>system</code> 分区种就是这样的结构了，当然了，其中的 <code>vendor</code> 和 <code>product</code> 实际上 link 到对应的分区而已。</p>
+<h2 id="配合-proprietary-files-txt-使用"><a href="#配合-proprietary-files-txt-使用" class="headerlink" title="配合 proprietary-files.txt 使用"></a>配合 <code>proprietary-files.txt</code> 使用</h2><p>在挂在镜像成功之后，我们还需要将这些文件全都拉出来，形成一个和 ROM 中目录结构类似的目录。目录可以参考前面的截图。</p>
+<p>device tree 中通常需要准备好 <code>setup-makefiles.sh</code> 和 <code>extract-files.sh</code> 脚本，如果这两份脚本是确认可用了的话，以前面截图的目录位置为例子。</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">./setup-makefiles.sh /miui_12.0.9/system</span><br><span class="line">./extract-files.sh /miui_12.0.9/system</span><br></pre></td></tr></table></figure>
+
+<p>这样执行后，脚本就会根据 <code>proprietary-files.txt</code> 定义的规则创建或更新对应的 vendor 仓库了。</p>
+
+            
+
+
+        </div>
+    </div>
+    <div id="post-footer" class="post-footer main-content-wrap">
+        
+            <div class="post-footer-tags">
+                <span class="text-color-light text-small">标签</span><br/>
+                
+    <a class="tag tag--primary tag--small t-none-link" href="/tags/AOSP-%E5%87%86%E5%A4%87%E5%B7%A5%E4%BD%9C/" rel="tag">AOSP 准备工作</a>
+
+            </div>
+        
+        
+            <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2021/05/19/unveiling-material-you/"
+                    data-tooltip="Material You 登场"
+                    aria-label="上一篇: Material You 登场"
+                >
+                    
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                    </a>
+            </li>
+            <li class="post-action">
+                
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2020/12/01/mokee-ify-note/"
+                    data-tooltip="小米10Pro适配魔趣笔记"
+                    aria-label="下一篇: 小米10Pro适配魔趣笔记"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Share this post"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
+            </a>
+        </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="http://service.weibo.com/share/share.php?&amp;title=https://seasonyuu.github.io/2020/12/01/extract-system/"
+                    title="分享到 Weibo"
+                    aria-label="分享到 Weibo"
+                >
+                    <i class="fab fa-weibo" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="http://connect.qq.com/widget/shareqq/index.html?url=https://seasonyuu.github.io/2020/12/01/extract-system/&amp;title=解压 Android 镜像"
+                    title="分享到 QQ"
+                    aria-label="分享到 QQ"
+                >
+                    <i class="fab fa-qq" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#table-of-contents" aria-label="目录">
+            
+                <i class="fa fa-list" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+        
+        
+            
+        
+    </div>
+</article>
+
+
+
+                <footer id="footer" class="main-content-wrap">
+    <span class="copyrights">
+        Copyrights &copy; 2021 Season Yuu. All Rights Reserved.
+    </span>
+</footer>
+
+            </div>
+            
+                <div id="bottom-bar" class="post-bottom-bar" data-behavior="4">
+                    <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2021/05/19/unveiling-material-you/"
+                    data-tooltip="Material You 登场"
+                    aria-label="上一篇: Material You 登场"
+                >
+                    
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                    </a>
+            </li>
+            <li class="post-action">
+                
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2020/12/01/mokee-ify-note/"
+                    data-tooltip="小米10Pro适配魔趣笔记"
+                    aria-label="下一篇: 小米10Pro适配魔趣笔记"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Share this post"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
+            </a>
+        </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="http://service.weibo.com/share/share.php?&amp;title=https://seasonyuu.github.io/2020/12/01/extract-system/"
+                    title="分享到 Weibo"
+                    aria-label="分享到 Weibo"
+                >
+                    <i class="fab fa-weibo" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="http://connect.qq.com/widget/shareqq/index.html?url=https://seasonyuu.github.io/2020/12/01/extract-system/&amp;title=解压 Android 镜像"
+                    title="分享到 QQ"
+                    aria-label="分享到 QQ"
+                >
+                    <i class="fab fa-qq" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#table-of-contents" aria-label="目录">
+            
+                <i class="fa fa-list" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+                </div>
+                
+    <div id="share-options-bar" class="share-options-bar" data-behavior="4">
+        <i id="btn-close-shareoptions" class="fa fa-times"></i>
+        <ul class="share-options">
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="http://service.weibo.com/share/share.php?&amp;title=https://seasonyuu.github.io/2020/12/01/extract-system/"
+                        aria-label="分享到 Weibo"
+                    >
+                        <i class="fab fa-weibo" aria-hidden="true"></i><span>分享到 Weibo</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="http://connect.qq.com/widget/shareqq/index.html?url=https://seasonyuu.github.io/2020/12/01/extract-system/&amp;title=解压 Android 镜像"
+                        aria-label="分享到 QQ"
+                    >
+                        <i class="fab fa-qq" aria-hidden="true"></i><span>分享到 QQ</span>
+                    </a>
+                </li>
+            
+        </ul>
+    </div>
+
+
+            
+        </div>
+        
+
+
+    
+        
+    
+
+<div id="about">
+    <div id="about-card">
+        <div id="about-btn-close">
+            <i class="fa fa-times"></i>
+        </div>
+        
+            <img id="about-card-picture" src="/assets/images/./avatar.jpg" alt="作者的图片"/>
+        
+            <h4 id="about-card-name">Season Yuu</h4>
+        
+            <div id="about-card-bio"><p>SeasonYuu 笔记屋</p>
+</div>
+        
+        
+            <div id="about-card-job">
+                <i class="fa fa-briefcase"></i>
+                <br/>
+                <p>Android Developer</p>
+
+            </div>
+        
+        
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                China
+            </div>
+        
+    </div>
+</div>
+
+        
+        
+<div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
+        <!--SCRIPTS-->
+
+<script src="/assets/js/script-ppdv3af67yfv0rzbr8g6xykevgsu7csb854zfoppnklsyvwcql4mdrqfmlq3.min.js"></script>
+
+<!--SCRIPTS END-->
+
+
+    
+
+
+
+
+    </body>
+</html>

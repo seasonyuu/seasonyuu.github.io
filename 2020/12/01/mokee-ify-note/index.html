@@ -1,0 +1,619 @@
+
+<!DOCTYPE html>
+<html lang="zh-cn">
+    
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="SeasonYuu 笔记屋">
+    <title>小米10Pro适配魔趣笔记 - SeasonYuu 笔记屋</title>
+    <meta name="author" content="Season Yuu">
+    
+        <meta name="keywords" content="Mokee">
+    
+    
+        <link rel="icon" href="https://seasonyuu.github.io/assets/images/favicon.ico">
+    
+    
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"Season Yuu","sameAs":["https://github.com/seasonyuu","mailto"],"image":"./avatar.jpg"},"articleBody":"\n魔趣 ROM 基于 Android 开源项目 (AOSP) 二次开发的三方定制 ROM。\n选择魔趣作为主要的学习方向，是因为魔趣本地化定制的部分、以及中国开发者更加活跃，魔趣在国内的开发氛围更为友善。\n\n首先，为自己定下一些小目标\n\n 指纹\n NFC\n 声音\n 蓝牙\n 微信指纹支付\n 支付宝指纹支付\n 帧率切换\n Others\n\n\n\n我的 CMI 开源代码\ndevice tree\nvendor\n20201212 小记基本确定了第一版搞定了。小白入场基本都是靠前人肩膀了。\n小米 10 系列机型有很多个大佬在维护( markakash, Manuel, VladV1V )，我维护的版本基本基于 markakash 的 PE ten 分支和 Manuel 的 lineage 17.1 分支。\n前人的肩膀还是比较坚实的，当我编译出包时 NFC、蓝牙这些东西就已经好了。\n这里说几个自己学到的东西。\n底包由于目前小米 865 系列主要还是通过预编译内核形式来编译三方 ROM ，因此强调底包还是比较重要的。\n通过 XINGRZ 大佬维护的 Web 解包工具 可以方便地将 boot.img 中的 kernel.img 和 dtb.img 提取出来，替换进 device 的 prebuilt 目录中，dtbo.img 的话则在线刷包的解压包中可以找到。\n此外还有 vendor 的部分也需要更新，主要还是通过解压 system, product, vendor 三个镜像来处理，具体操作可以通过 这篇博客 中的介绍学习。\nSepolicy由于使用了预编译内核，last_kmsg 中的配置似乎是炸的，所以我们需要把 AOSP 中关于这部分的定义都先去掉。否则会出现开机看不到开机动画直接重启到 Recovery 的现象。\n参考 这条提交 Pick 一下即可。\n信号当不更新 vendor 时信号是好的，但是一旦更新了 vendor 信号就炸了，vendor 也未知了。\n有一个 qti-telephony-common.jar 的包是负责基带通信的。但是如果更新成 MIUI 自带的 jar 是不行的。应该是 MIUI 进行了定制，所以这里我沿用了 markakash vendor 仓库中的 jar，并在 proprietary-files.txt 中增加 sha1sum 避免下次同步时此文件被覆盖。\n\n另外还有一个情况，是之前我用 umi 的 device 修改来跑 cmi 的时候遇到的。如果 device 没有声明对的话，也有可能导致基带未知。\n\n声音破音这个主要出现在 markakash 维护的版本中，而 Manuel 的版本并没有这个问题。通过一系列搜索和验证，主要的根由是从 MIUI vendor 中拉出的 soundfx 库应该是小米自己修改过的版本，使用 Manual 的版本（虽然不知道哪来的）就不会出现这个问题了，与此同时，我们也同步修改 proprietary-files.txt 进行标记。\n指纹支付微信和支付宝指纹支付其实我是同步开始调研的，但是目前只有支付宝的在之前编译 RR 时是通了的，到魔趣这边时还没调通。\n两家方案的关键字分别是 IFAA 和 Soter ，直接 Google 相关关键字其实就可以搜到很多参考资料了。\n这个提交 中可以看到相关的一些实现，主要就是定义了 org.ifaa.android.manager 的模块来调用支付宝和微信的指纹支付。\n对于小米而言，另外还涉及了 Mlipay 这个服务，小米对两家指纹支付方案进行了封装。我们需要在 propriety-files.txt 中定义好 Mlipay 和 Soter 相关文件的引用。\n1234567891011121314151617# Mlipayvendor/bin/mlipayd@1.1vendor/etc/init/vendor.xiaomi.hardware.mlipay@1.1-service.rcvendor/lib64/libmlipay.sovendor/lib64/libmlipay@1.1.sovendor/lib64/vendor.xiaomi.hardware.mlipay@1.0.sovendor/lib64/vendor.xiaomi.hardware.mlipay@1.1.sovendor/lib64/vendor.xiaomi.hardware.mtdservice@1.0.sovendor/lib64/vendor.xiaomi.hardware.mtdservice@1.1.sovendor/lib64/vendor.xiaomi.hardware.mtdservice@1.2.so# Soter-vendor/app/SoterService/SoterService.apkvendor/bin/hw/vendor.qti.hardware.soter@1.0-servicevendor/etc/init/vendor.qti.hardware.soter@1.0-service.rcvendor/lib64/hw/vendor.qti.hardware.soter@1.0-impl.sovendor/lib64/vendor.qti.hardware.soter@1.0.so\n\n然后就开始最关键的地方，配置 sepolicy。\n1// TO BE CONTINUE\n\n屏幕刷新率切换AOSP 直接就是支持配置刷新率的，但是设置界面的话就需要我们自己撸了。如果不想撸界面的话，可以直接配置一个默认的刷新率。\n在 framework 的 overlay 中，配置\n12345&lt;!-- 文件位于 framework/base/res/res/values/config.xml --&gt;&lt;!-- The default peak refresh rate for a given device. Change this value if you want to allow    for higher refresh rates to be automatically used out of the box --&gt;&lt;integer name=&quot;config_defaultPeakRefreshRate&quot;&gt;90&lt;/integer&gt;","dateCreated":"2020-12-01T09:16:06+00:00","dateModified":"2021-06-16T09:08:36+00:00","datePublished":"2020-12-01T09:16:06+00:00","description":"\n魔趣 ROM 基于 Android 开源项目 (AOSP) 二次开发的三方定制 ROM。\n选择魔趣作为主要的学习方向，是因为魔趣本地化定制的部分、以及中国开发者更加活跃，魔趣在国内的开发氛围更为友善。\n\n首先，为自己定下一些小目标\n\n 指纹\n NFC\n 声音\n 蓝牙\n 微信指纹支付\n 支付宝指纹支付\n 帧率切换\n Others\n","headline":"小米10Pro适配魔趣笔记","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://seasonyuu.github.io/2020/12/01/mokee-ify-note/"},"publisher":{"@type":"Organization","name":"Season Yuu","sameAs":["https://github.com/seasonyuu","mailto"],"image":"./avatar.jpg","logo":{"@type":"ImageObject","url":"./avatar.jpg"}},"url":"https://seasonyuu.github.io/2020/12/01/mokee-ify-note/","keywords":"AOSP 编译"}</script>
+    <meta name="description" content="魔趣 ROM 基于 Android 开源项目 (AOSP) 二次开发的三方定制 ROM。 选择魔趣作为主要的学习方向，是因为魔趣本地化定制的部分、以及中国开发者更加活跃，魔趣在国内的开发氛围更为友善。  首先，为自己定下一些小目标   指纹  NFC  声音  蓝牙  微信指纹支付  支付宝指纹支付  帧率切换  Others">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="小米10Pro适配魔趣笔记">
+<meta property="og:url" content="https://seasonyuu.github.io/2020/12/01/mokee-ify-note/index.html">
+<meta property="og:site_name" content="SeasonYuu 笔记屋">
+<meta property="og:description" content="魔趣 ROM 基于 Android 开源项目 (AOSP) 二次开发的三方定制 ROM。 选择魔趣作为主要的学习方向，是因为魔趣本地化定制的部分、以及中国开发者更加活跃，魔趣在国内的开发氛围更为友善。  首先，为自己定下一些小目标   指纹  NFC  声音  蓝牙  微信指纹支付  支付宝指纹支付  帧率切换  Others">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2020-12-01T09:16:06.000Z">
+<meta property="article:modified_time" content="2021-06-16T09:08:36.955Z">
+<meta property="article:author" content="Season Yuu">
+<meta property="article:tag" content="AOSP 编译">
+<meta name="twitter:card" content="summary">
+    
+    
+        
+    
+    
+        <meta property="og:image" content="https://seasonyuu.github.io/assets/images/./avatar.jpg"/>
+    
+    
+    
+    
+    <!--STYLES-->
+    
+<link rel="stylesheet" href="/assets/css/style-6h8rzx2nlvnuhsfvag8a8asiym8uxcq2iljevwdentgvkrofreed3byodqbo.min.css">
+
+    <!--STYLES END-->
+    
+
+    
+
+    
+        
+    
+</head>
+
+    <body>
+        <div id="blog">
+            <!-- Define author's picture -->
+
+
+    
+        
+            
+        
+    
+
+<header id="header" data-behavior="4">
+    <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+    <div class="header-title">
+        <a
+            class="header-title-link"
+            href="/"
+            aria-label=""
+        >
+            SeasonYuu 笔记屋
+        </a>
+    </div>
+    
+        
+            <a
+                class="header-right-picture "
+                href="#about"
+                aria-label="打开链接: /#about"
+            >
+        
+        
+            <img class="header-picture" src="/assets/images/./avatar.jpg" alt="作者的图片"/>
+        
+        </a>
+    
+</header>
+
+            <!-- Define author's picture -->
+
+
+
+        
+    
+
+<nav id="sidebar" data-behavior="4">
+    <div class="sidebar-container">
+        
+            <div class="sidebar-profile">
+                <a
+                    href="/#about"
+                    aria-label="阅读有关作者的更多信息"
+                >
+                    <img class="sidebar-profile-picture" src="/assets/images/./avatar.jpg" alt="作者的图片"/>
+                </a>
+                <h4 class="sidebar-profile-name">Season Yuu</h4>
+                
+                    <h5 class="sidebar-profile-bio"><p>SeasonYuu 笔记屋</p>
+</h5>
+                
+            </div>
+        
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/"
+                            
+                            rel="noopener"
+                            title="首页"
+                        >
+                        <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">首页</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-categories"
+                            
+                            rel="noopener"
+                            title="分类"
+                        >
+                        <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">分类</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-tags"
+                            
+                            rel="noopener"
+                            title="标签"
+                        >
+                        <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">标签</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-archives"
+                            
+                            rel="noopener"
+                            title="归档"
+                        >
+                        <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">归档</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link open-algolia-search"
+                            href="#search"
+                            
+                            rel="noopener"
+                            title="搜索"
+                        >
+                        <i class="sidebar-button-icon fa fa-search" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">搜索</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="#about"
+                            
+                            rel="noopener"
+                            title="关于"
+                        >
+                        <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">关于</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://github.com/seasonyuu"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="GitHub"
+                        >
+                        <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">GitHub</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/mailto"
+                            
+                            rel="noopener"
+                            title="邮箱"
+                        >
+                        <i class="sidebar-button-icon fa fa-envelope" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">邮箱</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+    </div>
+</nav>
+
+            
+            <div id="main" data-behavior="4"
+                 class="
+                        hasCoverMetaIn
+                        ">
+                
+<article class="post">
+    
+    
+        <div class="post-header main-content-wrap text-left">
+    
+        <h1 class="post-title">
+            小米10Pro适配魔趣笔记
+        </h1>
+    
+    
+        <div class="post-meta">
+    <time datetime="2020-12-01T09:16:06+00:00">
+	
+		    12月 01, 2020
+    	
+    </time>
+    
+        <span>发布在 </span>
+        
+    <a class="category-link" href="/categories/AOSP/">AOSP</a>
+
+
+    
+</div>
+
+    
+</div>
+
+    
+    <div class="post-content markdown">
+        <div class="main-content-wrap">
+            <blockquote>
+<p><a target="_blank" rel="noopener" href="https://download.mokeedev.com/">魔趣 ROM</a> 基于 Android 开源项目 (AOSP) 二次开发的三方定制 ROM。</p>
+<p>选择魔趣作为主要的学习方向，是因为魔趣本地化定制的部分、以及中国开发者更加活跃，魔趣在国内的开发氛围更为友善。</p>
+</blockquote>
+<p>首先，为自己定下一些小目标</p>
+<ul>
+<li><input checked="" disabled="" type="checkbox"> 指纹</li>
+<li><input checked="" disabled="" type="checkbox"> NFC</li>
+<li><input checked="" disabled="" type="checkbox"> 声音</li>
+<li><input checked="" disabled="" type="checkbox"> 蓝牙</li>
+<li><input disabled="" type="checkbox"> 微信指纹支付</li>
+<li><input disabled="" type="checkbox"> 支付宝指纹支付</li>
+<li><input checked="" disabled="" type="checkbox"> 帧率切换</li>
+<li><input disabled="" type="checkbox"> Others</li>
+</ul>
+<h1 id="table-of-contents">目录</h1><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#20201212-%E5%B0%8F%E8%AE%B0"><span class="toc-text">20201212 小记</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%BA%95%E5%8C%85"><span class="toc-text">底包</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Sepolicy"><span class="toc-text">Sepolicy</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BF%A1%E5%8F%B7"><span class="toc-text">信号</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%A3%B0%E9%9F%B3%E7%A0%B4%E9%9F%B3"><span class="toc-text">声音破音</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8C%87%E7%BA%B9%E6%94%AF%E4%BB%98"><span class="toc-text">指纹支付</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%B1%8F%E5%B9%95%E5%88%B7%E6%96%B0%E7%8E%87%E5%88%87%E6%8D%A2"><span class="toc-text">屏幕刷新率切换</span></a></li></ol></li></ol>
+
+<p>我的 CMI 开源代码</p>
+<p><a target="_blank" rel="noopener" href="https://github.com/seasonyuu/device_xiaomi_cmi">device tree</a></p>
+<p><a target="_blank" rel="noopener" href="https://github.com/seasonyuu/vendor_xiaomi_cmi">vendor</a></p>
+<h2 id="20201212-小记"><a href="#20201212-小记" class="headerlink" title="20201212 小记"></a>20201212 小记</h2><p>基本确定了第一版搞定了。小白入场基本都是靠前人肩膀了。</p>
+<p>小米 10 系列机型有很多个大佬在维护( <a target="_blank" rel="noopener" href="https://github.com/markakash">markakash</a>, <a target="_blank" rel="noopener" href="https://github.com/dataoutputstream">Manuel</a>, <a target="_blank" rel="noopener" href="https://github.com/VladV1V">VladV1V</a> )，我维护的版本基本基于 markakash 的 PE ten 分支和 Manuel 的 lineage 17.1 分支。</p>
+<p>前人的肩膀还是比较坚实的，当我编译出包时 NFC、蓝牙这些东西就已经好了。</p>
+<p>这里说几个自己学到的东西。</p>
+<h3 id="底包"><a href="#底包" class="headerlink" title="底包"></a>底包</h3><p>由于目前小米 865 系列主要还是通过预编译内核形式来编译三方 ROM ，因此强调底包还是比较重要的。</p>
+<p>通过 <a target="_blank" rel="noopener" href="https://github.com/xingrz">XINGRZ</a> 大佬维护的 <a target="_blank" rel="noopener" href="https://boot.mokeedev.com/">Web 解包工具</a> 可以方便地将 <code>boot.img</code> 中的 <code>kernel.img</code> 和 <code>dtb.img</code> 提取出来，替换进 device 的 prebuilt 目录中，<code>dtbo.img</code> 的话则在线刷包的解压包中可以找到。</p>
+<p>此外还有 vendor 的部分也需要更新，主要还是通过解压 system, product, vendor 三个镜像来处理，具体操作可以通过 <a href="../extract-system">这篇博客</a> 中的介绍学习。</p>
+<h3 id="Sepolicy"><a href="#Sepolicy" class="headerlink" title="Sepolicy"></a>Sepolicy</h3><p>由于使用了预编译内核，last_kmsg 中的配置似乎是炸的，所以我们需要把 AOSP 中关于这部分的定义都先去掉。否则会出现开机看不到开机动画直接重启到 Recovery 的现象。</p>
+<p>参考 <a target="_blank" rel="noopener" href="https://github.com/dataoutputstream/lineage_system_sepolicy/commit/5d2c2db26798ca067c213b13b7d063a33eaceeff">这条提交</a> Pick 一下即可。</p>
+<h3 id="信号"><a href="#信号" class="headerlink" title="信号"></a>信号</h3><p>当不更新 vendor 时信号是好的，但是一旦更新了 vendor 信号就炸了，vendor 也未知了。</p>
+<p>有一个 <code>qti-telephony-common.jar</code> 的包是负责基带通信的。但是如果更新成 MIUI 自带的 jar 是不行的。应该是 MIUI 进行了定制，所以这里我沿用了 markakash vendor 仓库中的 jar，并在 <code>proprietary-files.txt</code> 中增加 sha1sum 避免下次同步时此文件被覆盖。</p>
+<blockquote>
+<p>另外还有一个情况，是之前我用 umi 的 device 修改来跑 cmi 的时候遇到的。如果 device 没有声明对的话，也有可能导致基带未知。</p>
+</blockquote>
+<h3 id="声音破音"><a href="#声音破音" class="headerlink" title="声音破音"></a>声音破音</h3><p>这个主要出现在 markakash 维护的版本中，而 Manuel 的版本并没有这个问题。通过一系列搜索和验证，主要的根由是从 MIUI vendor 中拉出的 soundfx 库应该是小米自己修改过的版本，使用 Manual 的版本（虽然不知道哪来的）就不会出现这个问题了，与此同时，我们也同步修改 <code>proprietary-files.txt</code> 进行标记。</p>
+<h3 id="指纹支付"><a href="#指纹支付" class="headerlink" title="指纹支付"></a>指纹支付</h3><p>微信和支付宝指纹支付其实我是同步开始调研的，但是目前只有支付宝的在之前编译 RR 时是通了的，到魔趣这边时还没调通。</p>
+<p>两家方案的关键字分别是 <code>IFAA</code> 和 <code>Soter</code> ，直接 Google 相关关键字其实就可以搜到很多参考资料了。</p>
+<p><a target="_blank" rel="noopener" href="https://review.lineageos.org/c/LineageOS/android_device_xiaomi_sm6150-common/+/274232/6">这个提交</a> 中可以看到相关的一些实现，主要就是定义了 <code>org.ifaa.android.manager</code> 的模块来调用支付宝和微信的指纹支付。</p>
+<p>对于小米而言，另外还涉及了 <code>Mlipay</code> 这个服务，小米对两家指纹支付方案进行了封装。我们需要在 <code>propriety-files.txt</code> 中定义好 <code>Mlipay</code> 和 <code>Soter</code> 相关文件的引用。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"># Mlipay</span><br><span class="line">vendor/bin/mlipayd@1.1</span><br><span class="line">vendor/etc/init/vendor.xiaomi.hardware.mlipay@1.1-service.rc</span><br><span class="line">vendor/lib64/libmlipay.so</span><br><span class="line">vendor/lib64/libmlipay@1.1.so</span><br><span class="line">vendor/lib64/vendor.xiaomi.hardware.mlipay@1.0.so</span><br><span class="line">vendor/lib64/vendor.xiaomi.hardware.mlipay@1.1.so</span><br><span class="line">vendor/lib64/vendor.xiaomi.hardware.mtdservice@1.0.so</span><br><span class="line">vendor/lib64/vendor.xiaomi.hardware.mtdservice@1.1.so</span><br><span class="line">vendor/lib64/vendor.xiaomi.hardware.mtdservice@1.2.so</span><br><span class="line"></span><br><span class="line"># Soter</span><br><span class="line">-vendor/app/SoterService/SoterService.apk</span><br><span class="line">vendor/bin/hw/vendor.qti.hardware.soter@1.0-service</span><br><span class="line">vendor/etc/init/vendor.qti.hardware.soter@1.0-service.rc</span><br><span class="line">vendor/lib64/hw/vendor.qti.hardware.soter@1.0-impl.so</span><br><span class="line">vendor/lib64/vendor.qti.hardware.soter@1.0.so</span><br></pre></td></tr></table></figure>
+
+<p>然后就开始最关键的地方，配置 <code>sepolicy</code>。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">// TO BE CONTINUE</span><br></pre></td></tr></table></figure>
+
+<h3 id="屏幕刷新率切换"><a href="#屏幕刷新率切换" class="headerlink" title="屏幕刷新率切换"></a>屏幕刷新率切换</h3><p>AOSP 直接就是支持配置刷新率的，但是设置界面的话就需要我们自己撸了。如果不想撸界面的话，可以直接配置一个默认的刷新率。</p>
+<p>在 framework 的 overlay 中，配置</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!-- 文件位于 framework/base/res/res/values/config.xml --&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">&lt;!-- The default peak refresh rate for a given device. Change this value if you want to allow</span></span><br><span class="line"><span class="comment">    for higher refresh rates to be automatically used out of the box --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">integer</span> <span class="attr">name</span>=<span class="string">&quot;config_defaultPeakRefreshRate&quot;</span>&gt;</span>90<span class="tag">&lt;/<span class="name">integer</span>&gt;</span></span><br></pre></td></tr></table></figure>
+            
+
+
+        </div>
+    </div>
+    <div id="post-footer" class="post-footer main-content-wrap">
+        
+            <div class="post-footer-tags">
+                <span class="text-color-light text-small">标签</span><br/>
+                
+    <a class="tag tag--primary tag--small t-none-link" href="/tags/AOSP-%E7%BC%96%E8%AF%91/" rel="tag">AOSP 编译</a>
+
+            </div>
+        
+        
+            <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2020/12/01/extract-system/"
+                    data-tooltip="解压 Android 镜像"
+                    aria-label="上一篇: 解压 Android 镜像"
+                >
+                    
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                    </a>
+            </li>
+            <li class="post-action">
+                
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2020/12/01/proprietary-blobs/"
+                    data-tooltip="proprietary-files.txt 编写"
+                    aria-label="下一篇: proprietary-files.txt 编写"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Share this post"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
+            </a>
+        </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="http://service.weibo.com/share/share.php?&amp;title=https://seasonyuu.github.io/2020/12/01/mokee-ify-note/"
+                    title="分享到 Weibo"
+                    aria-label="分享到 Weibo"
+                >
+                    <i class="fab fa-weibo" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="http://connect.qq.com/widget/shareqq/index.html?url=https://seasonyuu.github.io/2020/12/01/mokee-ify-note/&amp;title=小米10Pro适配魔趣笔记"
+                    title="分享到 QQ"
+                    aria-label="分享到 QQ"
+                >
+                    <i class="fab fa-qq" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#table-of-contents" aria-label="目录">
+            
+                <i class="fa fa-list" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+        
+        
+            
+        
+    </div>
+</article>
+
+
+
+                <footer id="footer" class="main-content-wrap">
+    <span class="copyrights">
+        Copyrights &copy; 2021 Season Yuu. All Rights Reserved.
+    </span>
+</footer>
+
+            </div>
+            
+                <div id="bottom-bar" class="post-bottom-bar" data-behavior="4">
+                    <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2020/12/01/extract-system/"
+                    data-tooltip="解压 Android 镜像"
+                    aria-label="上一篇: 解压 Android 镜像"
+                >
+                    
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                    </a>
+            </li>
+            <li class="post-action">
+                
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2020/12/01/proprietary-blobs/"
+                    data-tooltip="proprietary-files.txt 编写"
+                    aria-label="下一篇: proprietary-files.txt 编写"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Share this post"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
+            </a>
+        </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="http://service.weibo.com/share/share.php?&amp;title=https://seasonyuu.github.io/2020/12/01/mokee-ify-note/"
+                    title="分享到 Weibo"
+                    aria-label="分享到 Weibo"
+                >
+                    <i class="fab fa-weibo" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="http://connect.qq.com/widget/shareqq/index.html?url=https://seasonyuu.github.io/2020/12/01/mokee-ify-note/&amp;title=小米10Pro适配魔趣笔记"
+                    title="分享到 QQ"
+                    aria-label="分享到 QQ"
+                >
+                    <i class="fab fa-qq" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#table-of-contents" aria-label="目录">
+            
+                <i class="fa fa-list" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+                </div>
+                
+    <div id="share-options-bar" class="share-options-bar" data-behavior="4">
+        <i id="btn-close-shareoptions" class="fa fa-times"></i>
+        <ul class="share-options">
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="http://service.weibo.com/share/share.php?&amp;title=https://seasonyuu.github.io/2020/12/01/mokee-ify-note/"
+                        aria-label="分享到 Weibo"
+                    >
+                        <i class="fab fa-weibo" aria-hidden="true"></i><span>分享到 Weibo</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="http://connect.qq.com/widget/shareqq/index.html?url=https://seasonyuu.github.io/2020/12/01/mokee-ify-note/&amp;title=小米10Pro适配魔趣笔记"
+                        aria-label="分享到 QQ"
+                    >
+                        <i class="fab fa-qq" aria-hidden="true"></i><span>分享到 QQ</span>
+                    </a>
+                </li>
+            
+        </ul>
+    </div>
+
+
+            
+        </div>
+        
+
+
+    
+        
+    
+
+<div id="about">
+    <div id="about-card">
+        <div id="about-btn-close">
+            <i class="fa fa-times"></i>
+        </div>
+        
+            <img id="about-card-picture" src="/assets/images/./avatar.jpg" alt="作者的图片"/>
+        
+            <h4 id="about-card-name">Season Yuu</h4>
+        
+            <div id="about-card-bio"><p>SeasonYuu 笔记屋</p>
+</div>
+        
+        
+            <div id="about-card-job">
+                <i class="fa fa-briefcase"></i>
+                <br/>
+                <p>Android Developer</p>
+
+            </div>
+        
+        
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                China
+            </div>
+        
+    </div>
+</div>
+
+        
+        
+<div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
+        <!--SCRIPTS-->
+
+<script src="/assets/js/script-ppdv3af67yfv0rzbr8g6xykevgsu7csb854zfoppnklsyvwcql4mdrqfmlq3.min.js"></script>
+
+<!--SCRIPTS END-->
+
+
+    
+
+
+
+
+    </body>
+</html>
