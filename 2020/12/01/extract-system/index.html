@@ -15,7 +15,7 @@
         <link rel="icon" href="https://seasonyuu.github.io/assets/images/favicon.ico">
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"Season Yuu","sameAs":["https://github.com/seasonyuu","mailto"],"image":"./avatar.jpg"},"articleBody":"\n\n\n以下内容适用于 Android 10 的固件镜像解压及挂载\n\n为什么需要解压镜像对于一些 OEM 定制的私有库，通常开源的 ROM 源码中是不可能包含的，而设备本身要运行起三方系统时，这些厂商定制的私有内容就需要作为预编译项添加到编译过程中。\n在 Project-Treble 被推行之后，Android 系统中指定了 product 分区和 vendor 分区来存放一些厂商指定的、设备定制的内容，通常我们需要从 system 分区和这两个分区中拉取一些指定的文件。\n开始我们需要的镜像文件有三个： system.img, vendor.img 和 product.img。\n通常我们从官方网站中下载线刷包会更便于提取对应的镜像文件，而有些时候可能并不存在线刷宝提供下载，那我们就要自己转换得到对应的 *.img 文件。\n从卡刷包提取 img在我忘了哪个 Android 版本之后开始，卡刷包中的镜像分成了两个文件，例如如果是 system 的话\n12system.transfer.listsystem.new.dat\n\n其中 system.new.dat 可能是 system.new.dat.br ，这种情况下需要使用 Google 官方工具 brotli 进行转换\nDebian 系可以直接这样安装\n12sudo apt updatesudo apt install brotli\n\n安装成功后，执行\n1brotli -d system.new.dat.br\n\n执行完则可以得到 system.new.dat 文件了。\n得到这三个文件之后，使用 dat2img （要求 python 环境）转换后即可得到 system.img 镜像文件\n1./sdat2img.py system.transfer.list system.new.dat system.img\n\n上面以 system.img 举例，vendor 和 product 参考替换对应文件名即可。\n分区介绍得到各个镜像后，Linux 中需要将镜像 mount 到某个文件夹，我们首先 mount system 分区。\n挂载成功后，我们会看根目录中又存在一个 system 目录，这个目录才是我们需要的最终目录。\n\n在刷机之后，通过 root 你也可以看到实际上 system 分区种就是这样的结构了，当然了，其中的 vendor 和 product 实际上 link 到对应的分区而已。\n配合 proprietary-files.txt 使用在挂在镜像成功之后，我们还需要将这些文件全都拉出来，形成一个和 ROM 中目录结构类似的目录。目录可以参考前面的截图。\ndevice tree 中通常需要准备好 setup-makefiles.sh 和 extract-files.sh 脚本，如果这两份脚本是确认可用了的话，以前面截图的目录位置为例子。\n12./setup-makefiles.sh /miui_12.0.9/system./extract-files.sh /miui_12.0.9/system\n\n这样执行后，脚本就会根据 proprietary-files.txt 定义的规则创建或更新对应的 vendor 仓库了。\n","dateCreated":"2020-12-01T09:16:06+00:00","dateModified":"2021-06-16T10:11:14+00:00","datePublished":"2020-12-01T09:16:06+00:00","description":"\n\n\n以下内容适用于 Android 10 的固件镜像解压及挂载\n\n为什么需要解压镜像对于一些 OEM 定制的私有库，通常开源的 ROM 源码中是不可能包含的，而设备本身要运行起三方系统时，这些厂商定制的私有内容就需要作为预编译项添加到编译过程中。","headline":"解压 Android 镜像","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://seasonyuu.github.io/2020/12/01/extract-system/"},"publisher":{"@type":"Organization","name":"Season Yuu","sameAs":["https://github.com/seasonyuu","mailto"],"image":"./avatar.jpg","logo":{"@type":"ImageObject","url":"./avatar.jpg"}},"url":"https://seasonyuu.github.io/2020/12/01/extract-system/","keywords":"AOSP 准备工作"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"Season Yuu","sameAs":["https://github.com/seasonyuu","mailto"],"image":"./avatar.jpg"},"articleBody":"\n\n\n以下内容适用于 Android 10 的固件镜像解压及挂载\n\n为什么需要解压镜像对于一些 OEM 定制的私有库，通常开源的 ROM 源码中是不可能包含的，而设备本身要运行起三方系统时，这些厂商定制的私有内容就需要作为预编译项添加到编译过程中。\n在 Project-Treble 被推行之后，Android 系统中指定了 product 分区和 vendor 分区来存放一些厂商指定的、设备定制的内容，通常我们需要从 system 分区和这两个分区中拉取一些指定的文件。\n开始我们需要的镜像文件有三个： system.img, vendor.img 和 product.img。\n通常我们从官方网站中下载线刷包会更便于提取对应的镜像文件，而有些时候可能并不存在线刷宝提供下载，那我们就要自己转换得到对应的 *.img 文件。\n从卡刷包提取 img在我忘了哪个 Android 版本之后开始，卡刷包中的镜像分成了两个文件，例如如果是 system 的话\n12system.transfer.listsystem.new.dat\n\n其中 system.new.dat 可能是 system.new.dat.br ，这种情况下需要使用 Google 官方工具 brotli 进行转换\nDebian 系可以直接这样安装\n12sudo apt updatesudo apt install brotli\n\n安装成功后，执行\n1brotli -d system.new.dat.br\n\n执行完则可以得到 system.new.dat 文件了。\n得到这三个文件之后，使用 dat2img （要求 python 环境）转换后即可得到 system.img 镜像文件\n1./sdat2img.py system.transfer.list system.new.dat system.img\n\n上面以 system.img 举例，vendor 和 product 参考替换对应文件名即可。\n分区介绍得到各个镜像后，Linux 中需要将镜像 mount 到某个文件夹，我们首先 mount system 分区。\n挂载成功后，我们会看根目录中又存在一个 system 目录，这个目录才是我们需要的最终目录。\n\n在刷机之后，通过 root 你也可以看到实际上 system 分区种就是这样的结构了，当然了，其中的 vendor 和 product 实际上 link 到对应的分区而已。\n配合 proprietary-files.txt 使用在挂在镜像成功之后，我们还需要将这些文件全都拉出来，形成一个和 ROM 中目录结构类似的目录。目录可以参考前面的截图。\ndevice tree 中通常需要准备好 setup-makefiles.sh 和 extract-files.sh 脚本，如果这两份脚本是确认可用了的话，以前面截图的目录位置为例子。\n12./setup-makefiles.sh /miui_12.0.9/system./extract-files.sh /miui_12.0.9/system\n\n这样执行后，脚本就会根据 proprietary-files.txt 定义的规则创建或更新对应的 vendor 仓库了。\n","dateCreated":"2020-12-01T09:16:06+00:00","dateModified":"2021-06-16T10:38:21+00:00","datePublished":"2020-12-01T09:16:06+00:00","description":"\n\n\n以下内容适用于 Android 10 的固件镜像解压及挂载\n\n为什么需要解压镜像对于一些 OEM 定制的私有库，通常开源的 ROM 源码中是不可能包含的，而设备本身要运行起三方系统时，这些厂商定制的私有内容就需要作为预编译项添加到编译过程中。","headline":"解压 Android 镜像","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://seasonyuu.github.io/2020/12/01/extract-system/"},"publisher":{"@type":"Organization","name":"Season Yuu","sameAs":["https://github.com/seasonyuu","mailto"],"image":"./avatar.jpg","logo":{"@type":"ImageObject","url":"./avatar.jpg"}},"url":"https://seasonyuu.github.io/2020/12/01/extract-system/","keywords":"AOSP 准备工作"}</script>
     <meta name="description" content="以下内容适用于 Android 10 的固件镜像解压及挂载  为什么需要解压镜像对于一些 OEM 定制的私有库，通常开源的 ROM 源码中是不可能包含的，而设备本身要运行起三方系统时，这些厂商定制的私有内容就需要作为预编译项添加到编译过程中。">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="解压 Android 镜像">
@@ -25,7 +25,7 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://seasonyuu.github.io/2020/12/01/extract-system/factory_image_extracted.png">
 <meta property="article:published_time" content="2020-12-01T09:16:06.000Z">
-<meta property="article:modified_time" content="2021-06-16T10:11:14.227Z">
+<meta property="article:modified_time" content="2021-06-16T10:38:21.258Z">
 <meta property="article:author" content="Season Yuu">
 <meta property="article:tag" content="AOSP 准备工作">
 <meta name="twitter:card" content="summary">
@@ -42,7 +42,7 @@
     
     <!--STYLES-->
     
-<link rel="stylesheet" href="/assets/css/style-eidmy26dxburh9k62xhgoebbrhfwfvvw6mwmcoa3phxuw0uyuuxfatvygm2g.min.css">
+<link rel="stylesheet" href="/assets/css/style-oo8nmlnlj92fqbcynltntuypgbf13ogufp3xygqmmg08obzr11eopwklowk9.min.css">
 
     <!--STYLES END-->
     
@@ -604,7 +604,7 @@
 <div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
         <!--SCRIPTS-->
 
-<script src="/assets/js/script-rgwx0skyzvtu43zm409gohzgvnbx7gbvl0yemlzch943otgisrea3ambvjda.min.js"></script>
+<script src="/assets/js/script-xhap0cptcrhtgswd4akf5iybyj5go59rckehqtguoawxjwouxytz9xnyzpya.min.js"></script>
 
 <!--SCRIPTS END-->
 
